@@ -1,4 +1,4 @@
-name: Build Android APK from Web App
+name: Build Android APK via Cordova
 
 on:
   push:
@@ -23,8 +23,9 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: Extract ZIP and Build Web
+    - name: Install Cordova and Build Web App
       run: |
+        npm install -g cordova
         unzip -o "*.zip" -d extracted_app
         PROJECT_DIR=$(find extracted_app -name "package.json" -exec dirname {} \;)
         echo "PROJECT_DIR=$PROJECT_DIR" >> $GITHUB_ENV
@@ -32,25 +33,22 @@ jobs:
         npm install
         npm run build || npx vite build || true
         
-        # ساخت پوشه خروجی در صورت عدم وجود
-        mkdir -p dist
-        if [ -d "build" ]; then cp -r build/* dist/ 2>/dev/null || true; fi
-        if [ -d "public" ]; then cp -r public/* dist/ 2>/dev/null || true; fi
-
-    - name: Generate Android Project & Build APK
-      run: |
-        cd "$PROJECT_DIR"
-        npm install @capacitor/core @capacitor/cli @capacitor/android
-        npx cap init "StreetFighter" "com.streetfighter.irani" --web-dir dist
-        npx cap add android
-        npx cap sync android
+        # مشخص کردن پوشه خروجی وب
+        WEB_DIR="dist"
+        if [ -d "build" ]; then WEB_DIR="build"; fi
+        if [ -d "public" ]; then WEB_DIR="public"; fi
         
-        cd android
-        chmod +x gradlew
-        ./gradlew assembleDebug
+        # ساخت پروژه کلاغ اندروید
+        cd "$GITHUB_WORKSPACE"
+        cordova create cordova_app com.streetfighter.irani StreetFighter
+        cd cordova_app
+        rm -rf www/*
+        cp -r "$GITHUB_WORKSPACE/$PROJECT_DIR/$WEB_DIR/"* www/
+        cordova platform add android
+        cordova build android
 
-    - name: Upload APK
+    - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:
         name: app-debug
-        path: "**/outputs/apk/debug/*.apk"
+        path: "**/platforms/android/app/build/outputs/apk/debug/*.apk"
