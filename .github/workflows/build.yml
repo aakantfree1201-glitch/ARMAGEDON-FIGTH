@@ -1,4 +1,4 @@
-name: Build Android APK via Cordova
+name: Build Android APK
 
 on:
   push:
@@ -17,39 +17,40 @@ jobs:
       with:
         node-version: '18'
 
-    - name: Set up Java JDK 11
+    - name: Set up Java JDK
       uses: actions/setup-java@v4
       with:
-        java-version: '11'
+        java-version: '17'
         distribution: 'temurin'
 
-    - name: Setup Android SDK Licenses
+    - name: Extract ZIP and Build Web Project
       run: |
-        yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
-
-    - name: Install Cordova and Build Web App
-      run: |
-        npm install -g cordova
         unzip -o "*.zip" -d extracted_app
         PROJECT_DIR=$(find extracted_app -name "package.json" -exec dirname {} \;)
         cd "$PROJECT_DIR"
-        npm install
-        npm run build || npx vite build || true
+        npm install --legacy-peer-deps
+        npm run build || npx vite build
+
+    - name: Initialize Capacitor and Build APK
+      run: |
+        PROJECT_DIR=$(find extracted_app -name "package.json" -exec dirname {} \;)
+        cd "$PROJECT_DIR"
         
+        # تشخیص پوشه خروجی
         WEB_DIR="dist"
         if [ -d "build" ]; then WEB_DIR="build"; fi
-        if [ -d "public" ]; then WEB_DIR="public"; fi
         
-        cd "$GITHUB_WORKSPACE"
-        cordova create cordova_app com.streetfighter.irani StreetFighter
-        cd cordova_app
-        rm -rf www/*
-        cp -r "$GITHUB_WORKSPACE/$PROJECT_DIR/$WEB_DIR/"* www/
-        cordova platform add android@10.1.2
-        cordova build android --device
+        npx @capacitor/cli init "Street Fighter" "com.streetfighter.irani" --web-dir "$WEB_DIR"
+        npm install @capacitor/core @capacitor/android
+        npx @capacitor/cli add android
+        npx @capacitor/cli sync android
+        
+        cd android
+        chmod +x gradlew
+        ./gradlew assembleDebug
 
-    - name: Upload APK Artifact
+    - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
         name: app-debug
-        path: "**/platforms/android/app/build/outputs/apk/debug/*.apk"
+        path: "**/outputs/apk/debug/*.apk"
