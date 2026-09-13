@@ -1,4 +1,4 @@
-name: Build Android APK
+name: Build Android APK from Web App
 
 on:
   push:
@@ -12,8 +12,45 @@ jobs:
     - name: Checkout Repository
       uses: actions/checkout@v4
 
-    - name: Extract and Show All Files
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+
+    - name: Set up Java JDK
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+
+    - name: Extract ZIP and Prepare Web Assets
       run: |
-        unzip -o "*.zip" -d extracted_app || true
-        echo "=================== ALL FILES IN ZIP ==================="
-        find . -maxdepth 3
+        unzip -o "*.zip" -d extracted_app
+        PROJECT_DIR=$(find extracted_app -name "package.json" -exec dirname {} \;)
+        echo "PROJECT_DIR=$PROJECT_DIR" >> $GITHUB_ENV
+        cd "$PROJECT_DIR"
+        npm install
+        npm run build || npx vite build || true
+
+    - name: Setup Capacitor / Android Wrapper
+      run: |
+        cd "$PROJECT_DIR"
+        if [ ! -d "android" ]; then
+          npm install @capacitor/core @capacitor/cli @capacitor/android
+          npx cap init "Street Fighter Irani" "com.streetfighter.irani" --web-dir dist || npx cap init "Street Fighter Irani" "com.streetfighter.irani" --web-dir build
+          npx cap add android
+        fi
+        npx cap copy android
+        npx cap sync android
+
+    - name: Build Android APK
+      run: |
+        cd "$PROJECT_DIR/android"
+        chmod +x gradlew
+        ./gradlew assembleDebug
+
+    - name: Upload APK Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: app-debug
+        path: "**/outputs/apk/debug/*.apk"
