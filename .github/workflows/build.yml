@@ -23,7 +23,7 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: Extract ZIP and Prepare Web Assets
+    - name: Extract ZIP and Build Web Assets
       run: |
         unzip -o "*.zip" -d extracted_app
         PROJECT_DIR=$(find extracted_app -name "package.json" -exec dirname {} \;)
@@ -31,15 +31,19 @@ jobs:
         cd "$PROJECT_DIR"
         npm install
         npm run build || npx vite build || true
+        
+        # پیدا کردن هوشمند پوشه خروجی وب
+        WEB_DIR="dist"
+        if [ -d "build" ]; then WEB_DIR="build"; fi
+        if [ -d "public" ]; then WEB_DIR="public"; fi
+        echo "WEB_DIR=$WEB_DIR" >> $GITHUB_ENV
 
-    - name: Setup Capacitor / Android Wrapper
+    - name: Setup Capacitor and Android Platform
       run: |
         cd "$PROJECT_DIR"
-        if [ ! -d "android" ]; then
-          npm install @capacitor/core @capacitor/cli @capacitor/android
-          npx cap init "Street Fighter Irani" "com.streetfighter.irani" --web-dir dist || npx cap init "Street Fighter Irani" "com.streetfighter.irani" --web-dir build
-          npx cap add android
-        fi
+        npm install @capacitor/core @capacitor/cli @capacitor/android
+        npx cap init "Street Fighter Irani" "com.streetfighter.irani" --web-dir "$WEB_DIR" || true
+        npx cap add android || true
         npx cap copy android
         npx cap sync android
 
