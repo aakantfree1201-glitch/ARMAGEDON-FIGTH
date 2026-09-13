@@ -12,9 +12,14 @@ jobs:
     - name: Checkout Repository
       uses: actions/checkout@v4
 
-    - name: Extract ZIP file
+    - name: List Files
       run: |
-        unzip -o "*.zip" -d extracted_app
+        echo "=== Files in Repository ==="
+        ls -la
+        echo "=== Unzipping ==="
+        unzip -o "*.zip" -d extracted_app || true
+        echo "=== Searching for gradlew ==="
+        find . -name "gradlew"
 
     - name: Set up JDK
       uses: actions/setup-java@v4
@@ -25,14 +30,15 @@ jobs:
     - name: Build APK
       run: |
         GRADLEW_PATH=$(find . -name "gradlew" | head -n 1)
-        if [ -z "$GRADLEW_PATH" ]; then
-          echo "Could not find gradlew file!"
+        if [ -n "$GRADLEW_PATH" ]; then
+          PROJECT_DIR=$(dirname "$GRADLEW_PATH")
+          cd "$PROJECT_DIR"
+          chmod +x gradlew
+          ./gradlew assembleDebug
+        else
+          echo "ERROR: gradlew file not found anywhere in the ZIP!"
           exit 1
         fi
-        PROJECT_DIR=$(dirname "$GRADLEW_PATH")
-        cd "$PROJECT_DIR"
-        chmod +x gradlew
-        ./gradlew assembleDebug
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
