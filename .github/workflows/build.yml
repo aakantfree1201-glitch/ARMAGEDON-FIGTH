@@ -17,10 +17,10 @@ jobs:
       with:
         node-version: '18'
 
-    - name: Set up Java JDK 11
+    - name: Set up Java JDK 17
       uses: actions/setup-java@v4
       with:
-        java-version: '11'
+        java-version: '17'
         distribution: 'temurin'
 
     - name: Install Cordova and Build Web App
@@ -41,8 +41,8 @@ jobs:
         cd cordova_app
         rm -rf www/*
         cp -r "$GITHUB_WORKSPACE/$PROJECT_DIR/$WEB_DIR/"* www/
-        cordova platform add android@10.1.2
-        cordova build android -- --gradleArg=-PcdvBuildToolsVersion=30.0.3
+        cordova platform add android
+        cordova build android --verbose
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
