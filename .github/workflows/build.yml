@@ -14,8 +14,7 @@ jobs:
 
     - name: Extract ZIP file
       run: |
-        unzip -o "*.zip"
-        find . -maxdepth 2 -type d -name "android" | xargs -I {} cp -r {}/. ./android/ 2>/dev/null || true
+        unzip -o "*.zip" -d extracted_app
 
     - name: Set up JDK
       uses: actions/setup-java@v4
@@ -25,7 +24,13 @@ jobs:
 
     - name: Build APK
       run: |
-        if [ -d "android" ]; then cd android; fi
+        GRADLEW_PATH=$(find . -name "gradlew" | head -n 1)
+        if [ -z "$GRADLEW_PATH" ]; then
+          echo "Could not find gradlew file!"
+          exit 1
+        fi
+        PROJECT_DIR=$(dirname "$GRADLEW_PATH")
+        cd "$PROJECT_DIR"
         chmod +x gradlew
         ./gradlew assembleDebug
 
