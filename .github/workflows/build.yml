@@ -12,42 +12,8 @@ jobs:
     - name: Checkout Repository
       uses: actions/checkout@v4
 
-    - name: Extract ZIP file
+    - name: Extract and Show All Files
       run: |
         unzip -o "*.zip" -d extracted_app || true
-
-    - name: Set up JDK 17
-      uses: actions/setup-java@v4
-      with:
-        java-version: '17'
-        distribution: 'temurin'
-
-    - name: Setup Gradle
-      uses: gradle/actions/setup-gradle@v3
-
-    - name: Locate Project and Build APK
-      run: |
-        # پیدا کردن پوشه اصلی پروژه که فایل build.gradle دارد
-        GRADLE_FILE=$(find . -name "build.gradle" -o -name "build.gradle.kts" | head -n 1)
-        if [ -z "$GRADLE_FILE" ]; then
-          echo "No build.gradle found! Listing contents:"
-          ls -R
-          exit 1
-        fi
-        
-        PROJECT_DIR=$(dirname "$GRADLE_FILE")
-        cd "$PROJECT_DIR"
-        
-        # اگر gradlew وجود نداشت، آن را خودکار می‌سازد
-        if [ ! -f "gradlew" ]; then
-          gradle wrapper
-        fi
-        
-        chmod +x gradlew
-        ./gradlew assembleDebug --stacktrace
-
-    - name: Upload APK
-      uses: actions/upload-artifact@v4
-      with:
-        name: app-debug
-        path: "**/outputs/apk/debug/*.apk"
+        echo "=================== ALL FILES IN ZIP ==================="
+        find . -maxdepth 3
